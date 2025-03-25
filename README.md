@@ -1,42 +1,50 @@
-# Wikipedia Age Calculator Chrome Extension
+# Wikipedia Age Calculator
 
-This Chrome extension automatically calculates and displays ages next to years mentioned in Wikipedia articles. When reading about a person, it shows how old they were at different points in their life, making biographical articles more engaging and easier to understand.
+A Chrome extension that automatically calculates and displays the age of individuals at mentioned years in Wikipedia articles.
 
 ## Features
 
-- Automatically detects birth year (and death year if applicable) from Wikipedia pages
-- Calculates and displays ages next to all years mentioned in the article
-- Works with both living and deceased persons
-- Stylish, unobtrusive age annotations
-- Handles both infobox and article text parsing
+- Automatically detects birth and death years of people in Wikipedia articles
+- Adds age annotations next to all years mentioned in the article
+- Works for historical figures and modern individuals
+- Handles different Wikipedia page formats and structures
+- Supports mobile and desktop Wikipedia pages
+
+## How It Works
+
+The extension:
+1. Finds the birth year (and death year if applicable) from the Wikipedia page
+2. Identifies all years mentioned throughout the article
+3. Calculates the person's age at each mentioned year
+4. Displays the age in a subtle annotation next to each year
 
 ## Installation
 
-1. Clone or download this repository
+### From Chrome Web Store
+*(Coming soon)*
+
+### Manual Installation
+1. Download or clone this repository
 2. Open Chrome and go to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked" and select the `src` directory from this repository
-5. The extension is now installed and ready to use!
+3. Enable "Developer mode" in the top-right corner
+4. Click "Load unpacked" and select the `src` folder from this repository
+5. The extension is now installed and will work on any Wikipedia article about a person
 
 ## Usage
 
-1. Visit any Wikipedia page about a person
-2. The extension will automatically detect their birth year
-3. Ages will be displayed next to any years mentioned in the article
-4. For deceased persons, ages will only be shown up to their death year
+1. Navigate to any Wikipedia article about a person (e.g., [Albert Einstein](https://en.wikipedia.org/wiki/Albert_Einstein))
+2. The extension automatically adds age annotations next to years mentioned in the article
+3. No configuration needed - it works right out of the box!
 
 ## Examples
 
-Before:
-```
-In 2014, she appeared in her first film...
-```
-
-After:
-```
-In 2014 (age 15), she appeared in her first film...
-```
+- For someone born in 1960, the year 1985 in text would show: 1985 (age 25)
+- For historical figures, it works the same way (e.g., for Leonardo da Vinci, 1503 would show: 1503 (age 51))
 
 ## Contributing
 
-Feel free to open issues or submit pull requests if you have suggestions for improvements! 
+Contributions are welcome! Feel free to submit issues or pull requests.
+
+## License
+
+MIT License 
