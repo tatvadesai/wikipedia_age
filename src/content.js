@@ -19,25 +19,31 @@ function findBirthYear() {
     // First try to find birth year in the infobox
     const infobox = document.querySelector('.infobox, .infobox_v3');
     if (infobox) {
-        // Method 1: Look for "Born" row
-        const birthText = Array.from(infobox.querySelectorAll('tr, th, td')).find(row => 
-            row.textContent.toLowerCase().includes('born'));
-        if (birthText) {
-            const yearMatch = birthText.textContent.match(/\b\d{4}\b/);
-            if (yearMatch) {
-                console.log('Found birth year in infobox "Born" row:', yearMatch[0]);
-                return parseInt(yearMatch[0]);
-            }
-        }
-        
-        // Method 2: Look for birth date in any cell
-        const birthDateCell = Array.from(infobox.querySelectorAll('td')).find(cell => 
-            /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b.*\d{4}/.test(cell.textContent));
-        if (birthDateCell) {
-            const yearMatch = birthDateCell.textContent.match(/\b\d{4}\b/);
-            if (yearMatch) {
-                console.log('Found birth year in infobox date cell:', yearMatch[0]);
-                return parseInt(yearMatch[0]);
+        // Method 1: Look for "Born" row with various formats
+        const birthRows = Array.from(infobox.querySelectorAll('tr, th, td')).filter(row => 
+            row.textContent.toLowerCase().includes('born') || 
+            row.textContent.toLowerCase().includes('b.') ||
+            row.textContent.toLowerCase().includes('birth date'));
+            
+        for (const row of birthRows) {
+            // Try various date formats
+            const formats = [
+                /\b\d{4}\b/,  // Simple year
+                /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b.*\b\d{4}\b/,  // Month Year
+                /\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/,  // Day Month Year
+                /\b(?:b\.|born)\s+\d{4}\b/,  // b. YYYY or born YYYY
+                /\b(?:b\.|born)\s+(?:[A-Za-z]+\s+\d+,\s+)?\d{4}\b/  // b. Month Day, YYYY
+            ];
+            
+            for (const format of formats) {
+                const match = row.textContent.match(format);
+                if (match) {
+                    const yearMatch = match[0].match(/\b\d{4}\b/);
+                    if (yearMatch) {
+                        console.log('Found birth year in infobox:', yearMatch[0]);
+                        return parseInt(yearMatch[0]);
+                    }
+                }
             }
         }
     }
@@ -49,43 +55,48 @@ function findBirthYear() {
         return null;
     }
 
-    // Method 3: Look in the first paragraph for birth year patterns
+    // Method 2: Look in the first few paragraphs for birth year patterns
     const paragraphs = mainContent.querySelectorAll('p');
-    const firstFewParagraphs = Array.from(paragraphs).slice(0, 3);
+    const firstFewParagraphs = Array.from(paragraphs).slice(0, 5); // Increased to 5 paragraphs
     
     // Try different patterns in the first few paragraphs
     for (const paragraph of firstFewParagraphs) {
-        // Pattern 1: Look for "(born YYYY)" pattern
-        const bornPattern = paragraph.textContent.match(/\(born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\)/i);
-        if (bornPattern) {
-            console.log('Found birth year in "born YYYY" pattern:', bornPattern[1]);
-            return parseInt(bornPattern[1]);
-        }
+        const patterns = [
+            /\(born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\)/i,  // (born YYYY) or (born Month Day, YYYY)
+            /born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})/i,  // born YYYY or born Month Day, YYYY
+            /\b(?:b\.|born)\s+(\d{4})\b/i,  // b. YYYY or born YYYY
+            /\b(?:b\.|born)\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\b/i,  // b. Month Day, YYYY
+            /\b((?:b\.\s+)?\d{4})\s*(?:–|-|—)\s*\d{4}\b/i,  // YYYY-YYYY or b. YYYY-YYYY
+            /birth date\s*=\s*(\d{4})/i,  // birth date = YYYY
+            /date of birth\s*=\s*(\d{4})/i  // date of birth = YYYY
+        ];
         
-        // Pattern 2: Look for "born Month Day, YYYY" pattern
-        const datePattern = paragraph.textContent.match(/born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})/i);
-        if (datePattern) {
-            console.log('Found birth year in date pattern:', datePattern[1]);
-            return parseInt(datePattern[1]);
-        }
-        
-        // Pattern 3: Look for "YYYY-YYYY" or "b. YYYY" patterns
-        const yearRangePattern = paragraph.textContent.match(/\b((?:b\.\s+)?\d{4})\s*(?:–|-|—)\s*\d{4}\b/i);
-        if (yearRangePattern) {
-            const year = yearRangePattern[1].replace('b.', '').trim();
-            console.log('Found birth year in year range:', year);
-            return parseInt(year);
+        for (const pattern of patterns) {
+            const match = paragraph.textContent.match(pattern);
+            if (match) {
+                const year = match[1] || match[0].match(/\b\d{4}\b/)[0];
+                console.log('Found birth year in paragraph:', year);
+                return parseInt(year);
+            }
         }
     }
     
-    // Method 4: Look for birth year in the page title or first heading
+    // Method 3: Look for birth year in the page title or first heading
     const title = document.querySelector('h1#firstHeading') || document.querySelector('.mw-page-title-main');
     if (title) {
         const titleText = title.textContent;
-        const birthYearMatch = titleText.match(/\((\d{4})(?:\s*[-–—]\s*\d{4})?\)/);
-        if (birthYearMatch) {
-            console.log('Found birth year in page title:', birthYearMatch[1]);
-            return parseInt(birthYearMatch[1]);
+        const patterns = [
+            /\((\d{4})(?:\s*[-–—]\s*\d{4})?\)/,  // (YYYY) or (YYYY-YYYY)
+            /\(born\s+(\d{4})\)/i,  // (born YYYY)
+            /\b(\d{4})\s*[-–—]\s*\d{4}\b/  // YYYY-YYYY
+        ];
+        
+        for (const pattern of patterns) {
+            const match = titleText.match(pattern);
+            if (match) {
+                console.log('Found birth year in title:', match[1]);
+                return parseInt(match[1]);
+            }
         }
     }
 
@@ -298,7 +309,18 @@ function insertAges(birthYear, deathYear) {
     console.log(`Total years processed: ${totalYearsProcessed}`);
 }
 
-function init() {
+function initializeExtension() {
+    if (!isWikipediaArticle()) {
+        console.log('Not a Wikipedia article page, skipping initialization');
+        return;
+    }
+
+    // Check if already processed
+    if (document.documentElement.hasAttribute('data-age-processed')) {
+        console.log('Page already processed, skipping initialization');
+        return;
+    }
+
     console.log('Initializing Wikipedia Age Calculator...');
     
     // Create a new WeakSet instead of clearing (WeakSet has no clear method)
@@ -348,26 +370,62 @@ function isWikipediaArticle() {
 }
 
 // Run when the page is ready
+function initializeExtension() {
+    if (!isWikipediaArticle()) {
+        console.log('Not a Wikipedia article page, skipping initialization');
+        return;
+    }
+
+    // Check if already processed
+    if (document.documentElement.hasAttribute('data-age-processed')) {
+        console.log('Page already processed, skipping initialization');
+        return;
+    }
+
+    console.log('Initializing Wikipedia Age Calculator...');
+    
+    // Create a new WeakSet instead of clearing (WeakSet has no clear method)
+    processedNodes = new WeakSet();
+    
+    // Wait a short moment to ensure the page is fully loaded
+    setTimeout(() => {
+        const birthYear = findBirthYear();
+        if (!birthYear) {
+            console.log('Could not find birth year, stopping');
+            return;
+        }
+
+        const deathYear = findDeathYear();
+        console.log('Processing ages with birth year:', birthYear, 'death year:', deathYear);
+        insertAges(birthYear, deathYear);
+        
+        // Set flag to prevent multiple processing
+        document.documentElement.setAttribute('data-age-processed', 'true');
+    }, 1500);
+}
+
+// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     console.log('Document still loading, waiting for DOMContentLoaded');
-    document.addEventListener('DOMContentLoaded', () => {
-        if (isWikipediaArticle()) {
-            init();
-        }
-    });
+    document.addEventListener('DOMContentLoaded', initializeExtension);
 } else {
     console.log('Document already loaded, running init immediately');
-    if (isWikipediaArticle()) {
-        init();
-    }
+    initializeExtension();
 }
 
 // Fix the MutationObserver to be more selective about when to reinitialize
 const observer = new MutationObserver((mutations) => {
+    // Only reinitialize if the page hasn't been processed and is a Wikipedia article
     if (isWikipediaArticle() && !document.documentElement.hasAttribute('data-age-processed')) {
-        init();
+        initializeExtension();
     }
 });
 
 // Start observing the document with the configured parameters
-observer.observe(document.body, { childList: true, subtree: true, characterData: false }); 
+observer.observe(document.body, { 
+    childList: true, 
+    subtree: true, 
+    characterData: false,
+    attributes: true,
+    attributeFilter: ['data-age-processed']
+}); 
