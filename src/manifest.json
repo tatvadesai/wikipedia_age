@@ -2,19 +2,14 @@
   "manifest_version": 3,
   "name": "Wikipedia Age Calculator",
   "version": "1.0",
-  "description": "Calculates and displays ages next to years in Wikipedia articles when the toolbar icon is clicked.",
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["*://*.wikipedia.org/*"],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "action": {
-    "default_icon": {
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    },
-    "default_title": "Calculate Wikipedia Ages"
-  },
+  "description": "Automatically calculates and displays ages next to years in Wikipedia articles.",
+  "content_scripts": [
+    {
+      "matches": ["*://*.wikipedia.org/wiki/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "icons": {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"

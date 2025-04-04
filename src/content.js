@@ -12,6 +12,9 @@ const AGE_STYLE = {
 
 // Track processed nodes to prevent infinite loops
 let processedNodes = new WeakSet();
+let observer = null;
+let processingTimeout = null;
+const DEBOUNCE_DELAY = 400; // ms to wait before processing after DOM changes
 
 function findBirthYear() {
     // First try to find birth year in the infobox
@@ -140,6 +143,7 @@ function findDeathYear() {
 function createAgeSpan(age) {
     const span = document.createElement('span');
     span.textContent = `(age ${age})`;
+    span.classList.add('wiki-age-annotation');
     Object.assign(span.style, AGE_STYLE);
     return span;
 }
@@ -160,7 +164,7 @@ function insertAges(birthYear, deathYear) {
         { // Filter function to accept nodes
             acceptNode: function(node) {
                 // Skip nodes within excluded sections
-                if (node.parentElement.closest(excludedSelectors)) {
+                if (node.parentElement && node.parentElement.closest(excludedSelectors)) {
                     return NodeFilter.FILTER_REJECT;
                 }
                 // Skip nodes that don't contain a 4-digit year
@@ -222,42 +226,102 @@ function insertAges(birthYear, deathYear) {
                 processedNodes.add(textNode);
             }
         } catch (error) {
-            console.error('Error replacing text node:', error, textNode);
+            // Silently fail - node might have been removed during processing
         }
     });
 }
 
 // Main function to initialize the extension logic
-function initializeExtension() {
-    // Check if already processed to prevent multiple runs on the same page load/state
-    // This is still useful in case the user clicks the button multiple times.
-    if (document.documentElement.hasAttribute('data-age-processed')) {
-        console.log('Wikipedia Age Calculator: Page already processed.');
-        return; // Stop if already done
-    }
-
-    // Reset processed nodes for this run
+function processWikipediaPage() {
+    // Reset internal flags and processed nodes
+    document.documentElement.removeAttribute('data-age-processed');
     processedNodes = new WeakSet();
+    
+    // Remove any previously added age annotations
+    document.querySelectorAll('.wiki-age-annotation').forEach(span => span.remove());
 
     const birthYear = findBirthYear();
     if (!birthYear) {
-        console.log('Wikipedia Age Calculator: Could not find birth year.');
-        // Mark as processed even if no birth year found, to avoid retrying constantly
-        // if the button is clicked again.
-        document.documentElement.setAttribute('data-age-processed', 'true');
+        // Skip processing if no birth year found
         return;
     }
 
     const deathYear = findDeathYear();
-    console.log('Wikipedia Age Calculator: Processing ages with birth year:', birthYear, 'death year:', deathYear);
     insertAges(birthYear, deathYear);
 
     // Set flag to indicate processing is complete for this page view
     document.documentElement.setAttribute('data-age-processed', 'true');
-    console.log('Wikipedia Age Calculator: Age processing complete.');
 }
 
-// --- Execution ---
-// This script is now injected manually via the background script when the action icon is clicked.
-// We just need to call the main function.
-initializeExtension();
+// Debounced function to avoid multiple rapid processings
+function debouncedProcessPage() {
+    clearTimeout(processingTimeout);
+    processingTimeout = setTimeout(() => {
+        processWikipediaPage();
+    }, DEBOUNCE_DELAY);
+}
+
+// Setup MutationObserver to watch for DOM changes
+function setupObserver() {
+    if (observer) {
+        observer.disconnect();
+    }
+    
+    const contentContainer = document.querySelector('.mw-parser-output') || document.querySelector('#content');
+    if (!contentContainer) return;
+    
+    observer = new MutationObserver((mutations) => {
+        // Check if mutations are relevant (e.g., not just style changes)
+        const relevantMutation = mutations.some(mutation => 
+            mutation.type === 'childList' || 
+            (mutation.type === 'attributes' && mutation.attributeName === 'class')
+        );
+        
+        if (relevantMutation) {
+            debouncedProcessPage();
+        }
+    });
+    
+    observer.observe(contentContainer, { 
+        childList: true, 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class'] 
+    });
+}
+
+// Initialize on page load
+function initializeExtension() {
+    // Process the page initially
+    debouncedProcessPage();
+    
+    // Setup observer for future changes (Wikipedia uses AJAX for navigation)
+    setupObserver();
+    
+    // Also watch for URL changes (for Wikipedia's internal navigation)
+    let lastUrl = location.href;
+    
+    const urlObserver = new MutationObserver(() => {
+        if (lastUrl !== location.href) {
+            lastUrl = location.href;
+            
+            // Give Wikipedia time to render the new page content
+            setTimeout(() => {
+                debouncedProcessPage();
+                setupObserver(); // Re-setup observer for new content
+            }, 300);
+        }
+    });
+    
+    urlObserver.observe(document.querySelector('head'), { 
+        childList: true, 
+        subtree: true 
+    });
+}
+
+// Run on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeExtension);
+} else {
+    initializeExtension();
+}
