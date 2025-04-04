@@ -1,7 +1,6 @@
 // Style for the age annotations
 const AGE_STYLE = {
     color: '#555', // Slightly darker grey for better contrast
-    // backgroundColor: '#f8f9fa', // Remove background
     padding: '1px 3px', // Slightly reduce padding
     borderRadius: '2px', // Slightly smaller radius
     fontSize: '0.88em', // Slightly smaller font size
@@ -14,7 +13,7 @@ const AGE_STYLE = {
 let processedNodes = new WeakSet();
 let observer = null;
 let processingTimeout = null;
-const DEBOUNCE_DELAY = 400; // ms to wait before processing after DOM changes
+const DEBOUNCE_DELAY = 300; // ms to wait before processing after DOM changes
 
 function findBirthYear() {
     // First try to find birth year in the infobox
@@ -233,12 +232,23 @@ function insertAges(birthYear, deathYear) {
 
 // Main function to initialize the extension logic
 function processWikipediaPage() {
+    // Don't process non-article pages
+    if (location.href.includes('/wiki/Main_Page') || 
+        location.href.includes('/wiki/Special:') || 
+        !location.href.includes('/wiki/')) {
+        return;
+    }
+    
     // Reset internal flags and processed nodes
     document.documentElement.removeAttribute('data-age-processed');
     processedNodes = new WeakSet();
     
     // Remove any previously added age annotations
-    document.querySelectorAll('.wiki-age-annotation').forEach(span => span.remove());
+    document.querySelectorAll('.wiki-age-annotation').forEach(span => {
+        if (span.parentNode) {
+            span.parentNode.removeChild(span);
+        }
+    });
 
     const birthYear = findBirthYear();
     if (!birthYear) {
@@ -267,14 +277,16 @@ function setupObserver() {
         observer.disconnect();
     }
     
-    const contentContainer = document.querySelector('.mw-parser-output') || document.querySelector('#content');
-    if (!contentContainer) return;
+    // Watch the entire body for changes instead of just content container
+    const bodyElement = document.body;
+    if (!bodyElement) return;
     
     observer = new MutationObserver((mutations) => {
-        // Check if mutations are relevant (e.g., not just style changes)
+        // Process page on any significant DOM changes
         const relevantMutation = mutations.some(mutation => 
             mutation.type === 'childList' || 
-            (mutation.type === 'attributes' && mutation.attributeName === 'class')
+            (mutation.type === 'attributes' && 
+             (mutation.attributeName === 'class' || mutation.attributeName === 'id'))
         );
         
         if (relevantMutation) {
@@ -282,12 +294,37 @@ function setupObserver() {
         }
     });
     
-    observer.observe(contentContainer, { 
+    observer.observe(bodyElement, { 
         childList: true, 
         subtree: true,
         attributes: true,
-        attributeFilter: ['class'] 
+        attributeFilter: ['class', 'id'] 
     });
+}
+
+// Handle navigation events for Wikipedia's client-side routing
+function setupNavigationListeners() {
+    // Listen for popstate events (browser back/forward)
+    window.addEventListener('popstate', () => {
+        setTimeout(debouncedProcessPage, 300);
+    });
+    
+    // Listen for pageshow events
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            // Page was restored from the bfcache
+            setTimeout(debouncedProcessPage, 300);
+        }
+    });
+    
+    // Use URL change detection as a fallback
+    let lastUrl = location.href;
+    setInterval(() => {
+        if (lastUrl !== location.href) {
+            lastUrl = location.href;
+            setTimeout(debouncedProcessPage, 300);
+        }
+    }, 500);
 }
 
 // Initialize on page load
@@ -295,33 +332,19 @@ function initializeExtension() {
     // Process the page initially
     debouncedProcessPage();
     
-    // Setup observer for future changes (Wikipedia uses AJAX for navigation)
+    // Setup observer for content changes
     setupObserver();
     
-    // Also watch for URL changes (for Wikipedia's internal navigation)
-    let lastUrl = location.href;
-    
-    const urlObserver = new MutationObserver(() => {
-        if (lastUrl !== location.href) {
-            lastUrl = location.href;
-            
-            // Give Wikipedia time to render the new page content
-            setTimeout(() => {
-                debouncedProcessPage();
-                setupObserver(); // Re-setup observer for new content
-            }, 300);
-        }
-    });
-    
-    urlObserver.observe(document.querySelector('head'), { 
-        childList: true, 
-        subtree: true 
-    });
+    // Setup navigation event listeners
+    setupNavigationListeners();
 }
 
-// Run on page load
+// Run immediately if document is already loaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeExtension);
 } else {
     initializeExtension();
 }
+
+// Force processing after a short delay to ensure complete page load
+setTimeout(debouncedProcessPage, 1000);

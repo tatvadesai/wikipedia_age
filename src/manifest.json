@@ -5,9 +5,9 @@
   "description": "Automatically calculates and displays ages next to years in Wikipedia articles.",
   "content_scripts": [
     {
-      "matches": ["*://*.wikipedia.org/wiki/*"],
+      "matches": ["*://*.wikipedia.org/*"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "icons": {
