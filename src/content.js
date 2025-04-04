@@ -8,25 +8,19 @@ const AGE_STYLE = {
     marginLeft: '2px'
 };
 
-console.log('Wikipedia Age Calculator extension loaded');
-
 // Track processed nodes to prevent infinite loops
 let processedNodes = new WeakSet();
 
 function findBirthYear() {
-    console.log('Looking for birth year...');
-    
     // First try to find birth year in the infobox
     const infobox = document.querySelector('.infobox, .infobox_v3');
     if (infobox) {
-        // Method 1: Look for "Born" row with various formats
-        const birthRows = Array.from(infobox.querySelectorAll('tr, th, td')).filter(row => 
-            row.textContent.toLowerCase().includes('born') || 
+        const birthRows = Array.from(infobox.querySelectorAll('tr, th, td')).filter(row =>
+            row.textContent.toLowerCase().includes('born') ||
             row.textContent.toLowerCase().includes('b.') ||
             row.textContent.toLowerCase().includes('birth date'));
-            
+
         for (const row of birthRows) {
-            // Try various date formats
             const formats = [
                 /\b\d{4}\b/,  // Simple year
                 /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b.*\b\d{4}\b/,  // Month Year
@@ -34,13 +28,12 @@ function findBirthYear() {
                 /\b(?:b\.|born)\s+\d{4}\b/,  // b. YYYY or born YYYY
                 /\b(?:b\.|born)\s+(?:[A-Za-z]+\s+\d+,\s+)?\d{4}\b/  // b. Month Day, YYYY
             ];
-            
+
             for (const format of formats) {
                 const match = row.textContent.match(format);
                 if (match) {
                     const yearMatch = match[0].match(/\b\d{4}\b/);
                     if (yearMatch) {
-                        console.log('Found birth year in infobox:', yearMatch[0]);
                         return parseInt(yearMatch[0]);
                     }
                 }
@@ -51,56 +44,51 @@ function findBirthYear() {
     // If not found in infobox, try the main content area
     const mainContent = document.querySelector('.mw-parser-output');
     if (!mainContent) {
-        console.log('No main content area found');
         return null;
     }
 
     // Method 2: Look in the first few paragraphs for birth year patterns
     const paragraphs = mainContent.querySelectorAll('p');
-    const firstFewParagraphs = Array.from(paragraphs).slice(0, 5); // Increased to 5 paragraphs
-    
-    // Try different patterns in the first few paragraphs
+    const firstFewParagraphs = Array.from(paragraphs).slice(0, 5);
+
     for (const paragraph of firstFewParagraphs) {
         const patterns = [
-            /\(born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\)/i,  // (born YYYY) or (born Month Day, YYYY)
-            /born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})/i,  // born YYYY or born Month Day, YYYY
-            /\b(?:b\.|born)\s+(\d{4})\b/i,  // b. YYYY or born YYYY
-            /\b(?:b\.|born)\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\b/i,  // b. Month Day, YYYY
-            /\b((?:b\.\s+)?\d{4})\s*(?:–|-|—)\s*\d{4}\b/i,  // YYYY-YYYY or b. YYYY-YYYY
-            /birth date\s*=\s*(\d{4})/i,  // birth date = YYYY
-            /date of birth\s*=\s*(\d{4})/i  // date of birth = YYYY
+            /\(born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\)/i,
+            /born\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})/i,
+            /\b(?:b\.|born)\s+(\d{4})\b/i,
+            /\b(?:b\.|born)\s+(?:[A-Za-z]+\s+\d+,\s+)?(\d{4})\b/i,
+            /\b((?:b\.\s+)?\d{4})\s*(?:–|-|—)\s*\d{4}\b/i,
+            /birth date\s*=\s*(\d{4})/i,
+            /date of birth\s*=\s*(\d{4})/i
         ];
-        
+
         for (const pattern of patterns) {
             const match = paragraph.textContent.match(pattern);
             if (match) {
                 const year = match[1] || match[0].match(/\b\d{4}\b/)[0];
-                console.log('Found birth year in paragraph:', year);
                 return parseInt(year);
             }
         }
     }
-    
+
     // Method 3: Look for birth year in the page title or first heading
     const title = document.querySelector('h1#firstHeading') || document.querySelector('.mw-page-title-main');
     if (title) {
         const titleText = title.textContent;
         const patterns = [
-            /\((\d{4})(?:\s*[-–—]\s*\d{4})?\)/,  // (YYYY) or (YYYY-YYYY)
-            /\(born\s+(\d{4})\)/i,  // (born YYYY)
-            /\b(\d{4})\s*[-–—]\s*\d{4}\b/  // YYYY-YYYY
+            /\((\d{4})(?:\s*[-–—]\s*\d{4})?\)/,
+            /\(born\s+(\d{4})\)/i,
+            /\b(\d{4})\s*[-–—]\s*\d{4}\b/
         ];
-        
+
         for (const pattern of patterns) {
             const match = titleText.match(pattern);
             if (match) {
-                console.log('Found birth year in title:', match[1]);
                 return parseInt(match[1]);
             }
         }
     }
 
-    console.log('No birth year found using any method');
     return null;
 }
 
@@ -108,7 +96,7 @@ function findDeathYear() {
     // Try to find death year in the infobox
     const infobox = document.querySelector('.infobox, .infobox_v3');
     if (infobox) {
-        const deathText = Array.from(infobox.querySelectorAll('tr, th, td')).find(row => 
+        const deathText = Array.from(infobox.querySelectorAll('tr, th, td')).find(row =>
             row.textContent.toLowerCase().includes('died'));
         if (deathText) {
             const yearMatch = deathText.textContent.match(/\b\d{4}\b/);
@@ -124,19 +112,16 @@ function findDeathYear() {
     const paragraphs = mainContent.querySelectorAll('p');
     for (let i = 0; i < Math.min(3, paragraphs.length); i++) {
         const paragraph = paragraphs[i];
-        // Pattern 1: Look for "died Month Day, YYYY" pattern
         const deathDateMatch = paragraph.textContent.match(/(?:died|d\.) (?:[A-Za-z]+ \d+, )?(\d{4})/);
         if (deathDateMatch) {
             return parseInt(deathDateMatch[1]);
         }
-        
-        // Pattern 2: Look for "YYYY-YYYY" pattern
         const yearRangePattern = paragraph.textContent.match(/\b\d{4}\s*(?:–|-|—)\s*(\d{4})\b/);
         if (yearRangePattern) {
             return parseInt(yearRangePattern[1]);
         }
     }
-    
+
     // Look for death year in the page title
     const title = document.querySelector('h1#firstHeading') || document.querySelector('.mw-page-title-main');
     if (title) {
@@ -158,274 +143,141 @@ function createAgeSpan(age) {
 }
 
 function insertAges(birthYear, deathYear) {
-    console.log('Starting insertAges function');
-    
     const mainContent = document.querySelector('.mw-parser-output');
     if (!mainContent) {
-        console.log('Could not find main content area (.mw-parser-output)');
         return;
     }
-    
-    console.log('Found main content area');
-    
-    // Define year pattern - match any 4-digit year
+
     const yearRegex = /\b\d{4}\b/g;
-    
-    // Process all paragraph elements directly - include 'a' tag to catch linked years
-    const paragraphs = mainContent.querySelectorAll('p, li, td, th, dd, dt, h1, h2, h3, h4, h5, h6, a, span');
-    console.log(`Found ${paragraphs.length} potential elements to process`);
-    
-    let totalYearsProcessed = 0;
-    
-    // Create a copy of the paragraphs array to avoid live collection issues
-    Array.from(paragraphs).forEach((paragraph, paragraphIndex) => {
-        // Skip if already processed
-        if (processedNodes.has(paragraph)) {
-            return;
-        }
-        
-        // Skip if in a reference or other special section
-        if (paragraph.closest('.reference, .mw-references-wrap, .mw-editsection, .mw-cite-backlink')) {
-            return;
-        }
-        
-        // Mark as processed
-        processedNodes.add(paragraph);
-        
-        // Special case for simple elements that directly contain a year
-        if (paragraph.childNodes.length === 1 && 
-            paragraph.firstChild.nodeType === Node.TEXT_NODE && 
-            yearRegex.test(paragraph.textContent)) {
-            
-            const textNode = paragraph.firstChild;
-            if (!processedNodes.has(textNode)) {
-                processNodes([textNode], birthYear, deathYear);
-                processedNodes.add(textNode);
-                return; // Continue to next paragraph
-            }
-        }
-        
-        // Get all text nodes inside this paragraph
-        const textNodes = [];
-        const walker = document.createTreeWalker(
-            paragraph,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-        );
-        
-        let node;
-        while (node = walker.nextNode()) {
-            if (yearRegex.test(node.textContent) && !processedNodes.has(node)) {
-                textNodes.push(node);
-                // Mark text node as processed
-                processedNodes.add(node);
-            }
-        }
-        
-        // Process collected text nodes
-        processNodes(textNodes, birthYear, deathYear);
-    });
-    
-    // Helper function to process a batch of text nodes
-    function processNodes(textNodes, birthYear, deathYear) {
-        textNodes.forEach((textNode, nodeIndex) => {
-            const text = textNode.textContent;
-            const matches = Array.from(text.matchAll(yearRegex));
-            
-            if (matches.length === 0) return;
-            
-            console.log(`Processing node ${nodeIndex+1}: Found ${matches.length} years`);
-            totalYearsProcessed += matches.length;
-            
-            // Create a document fragment to hold the new content
-            const fragment = document.createDocumentFragment();
-            let lastIndex = 0;
-            
-            matches.forEach((match, matchIndex) => {
-                const year = parseInt(match[0]);
-                
-                // Add text before the year
-                fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
-                
-                // Add the year
-                fragment.appendChild(document.createTextNode(match[0]));
-                
-                // Calculate and add age if appropriate
-                if (year >= birthYear) {
-                    const age = year - birthYear;
-                    // Only show age if person was alive at that time
-                    if (!deathYear || year <= deathYear) {
-                        console.log(`Adding age ${age} for year ${year}`);
-                        fragment.appendChild(createAgeSpan(age));
-                    }
+    const excludedSelectors = '.reference, .mw-references-wrap, .mw-editsection, .mw-cite-backlink, .noprint, .infobox, .metadata, .navbox, .catlinks';
+
+    // Use TreeWalker to find all relevant text nodes in the main content area
+    const walker = document.createTreeWalker(
+        mainContent,
+        NodeFilter.SHOW_TEXT,
+        { // Filter function to accept nodes
+            acceptNode: function(node) {
+                // Skip nodes within excluded sections
+                if (node.parentElement.closest(excludedSelectors)) {
+                    return NodeFilter.FILTER_REJECT;
                 }
-                
-                lastIndex = match.index + match[0].length;
-            });
-            
-            // Add any remaining text
-            fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-            
-            // Replace the original text node with our fragment
-            try {
-                textNode.parentNode.replaceChild(fragment, textNode);
-            } catch (error) {
-                console.error('Error replacing text node:', error);
+                // Skip nodes that don't contain a 4-digit year
+                if (!yearRegex.test(node.textContent)) {
+                     // Reset regex lastIndex
+                    yearRegex.lastIndex = 0;
+                    return NodeFilter.FILTER_REJECT;
+                }
+                 // Reset regex lastIndex before accepting
+                yearRegex.lastIndex = 0;
+                return NodeFilter.FILTER_ACCEPT;
             }
-        });
-    }
-    
-    // Also process year-containing links directly
-    const links = mainContent.querySelectorAll('a');
-    const yearLinks = Array.from(links).filter(link => 
-        yearRegex.test(link.textContent) && 
-        !processedNodes.has(link) && 
-        !link.closest('.reference, .mw-references-wrap')
+        },
+        false
     );
-    
-    yearLinks.forEach(link => {
-        if (processedNodes.has(link)) return;
-        
-        processedNodes.add(link);
-        const year = parseInt(link.textContent.match(yearRegex)[0]);
-        
-        if (year >= birthYear && (!deathYear || year <= deathYear)) {
-            const age = year - birthYear;
-            console.log(`Adding age ${age} for year link ${year}`);
-            
-            // Create and add age span
-            const ageSpan = createAgeSpan(age);
-            if (link.nextSibling) {
-                link.parentNode.insertBefore(ageSpan, link.nextSibling);
-            } else {
-                link.parentNode.appendChild(ageSpan);
+
+    let node;
+    const nodesToProcess = [];
+    // Collect all nodes first to avoid issues with modifying the DOM during traversal
+    while (node = walker.nextNode()) {
+        nodesToProcess.push(node);
+    }
+
+    // Process collected text nodes
+    nodesToProcess.forEach(textNode => {
+        // Double-check if already processed (might happen with complex DOM changes)
+        if (processedNodes.has(textNode)) return;
+
+        const text = textNode.textContent;
+        const matches = Array.from(text.matchAll(yearRegex));
+        if (matches.length === 0) return; // Should not happen due to filter, but safe check
+
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+
+        matches.forEach((match) => {
+            const year = parseInt(match[0]);
+            // Add text before the year
+            fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+            // Add the year itself
+            fragment.appendChild(document.createTextNode(match[0]));
+
+            // Calculate and add age span if applicable
+            if (year >= birthYear && (!deathYear || year <= deathYear)) {
+                const age = year - birthYear;
+                fragment.appendChild(createAgeSpan(age));
             }
-            
-            totalYearsProcessed++;
+            lastIndex = match.index + match[0].length;
+        });
+
+        // Add any remaining text after the last match
+        fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+
+        // Replace the original text node with the fragment
+        try {
+            if (textNode.parentNode) {
+                textNode.parentNode.replaceChild(fragment, textNode);
+                // Mark the original node as processed
+                processedNodes.add(textNode);
+            }
+        } catch (error) {
+            console.error('Error replacing text node:', error, textNode);
         }
     });
-    
-    console.log(`Total years processed: ${totalYearsProcessed}`);
 }
 
-function initializeExtension() {
-    if (!isWikipediaArticle()) {
-        console.log('Not a Wikipedia article page, skipping initialization');
-        return;
-    }
-
-    // Check if already processed
-    if (document.documentElement.hasAttribute('data-age-processed')) {
-        console.log('Page already processed, skipping initialization');
-        return;
-    }
-
-    console.log('Initializing Wikipedia Age Calculator...');
-    
-    // Create a new WeakSet instead of clearing (WeakSet has no clear method)
-    processedNodes = new WeakSet();
-    
-    // Wait a short moment to ensure the page is fully loaded
-    setTimeout(() => {
-        const birthYear = findBirthYear();
-        if (!birthYear) {
-            console.log('Could not find birth year, stopping');
-            return;
-        }
-
-        const deathYear = findDeathYear();
-        console.log('Processing ages with birth year:', birthYear, 'death year:', deathYear);
-        insertAges(birthYear, deathYear);
-        
-        // Set flag to prevent multiple processing
-        document.documentElement.setAttribute('data-age-processed', 'true');
-    }, 1500);
-}
-
-// Function to check if we're on a Wikipedia article page
+// Function to check if we're on a relevant Wikipedia article page
 function isWikipediaArticle() {
-    // Check if we're on Wikipedia
-    if (!window.location.hostname.includes('wikipedia.org')) {
+    if (!window.location.hostname.endsWith('wikipedia.org')) return false;
+    if (!window.location.pathname.startsWith('/wiki/')) return false;
+
+    const excludedPrefixes = ['Special:', 'File:', 'Template:', 'Category:', 'Wikipedia:', 'Portal:', 'Help:', 'Talk:'];
+    if (excludedPrefixes.some(prefix => window.location.pathname.includes('/wiki/' + prefix))) {
         return false;
     }
-    
-    // Check if we're on an article page
-    if (!window.location.pathname.includes('/wiki/')) {
-        return false;
-    }
-    
-    // Exclude special pages
-    if (window.location.pathname.includes('Special:') ||
-        window.location.pathname.includes('File:') ||
-        window.location.pathname.includes('Template:') ||
-        window.location.pathname.includes('Category:') ||
-        window.location.pathname.includes('Wikipedia:') ||
-        window.location.pathname.includes('Portal:') ||
-        window.location.pathname.includes('Help:')) {
-        return false;
-    }
-    
+    // Avoid main page
+    if (window.location.pathname === '/wiki/Main_Page') return false;
+
     return true;
 }
 
-// Run when the page is ready
+// Main function to initialize the extension logic
 function initializeExtension() {
     if (!isWikipediaArticle()) {
-        console.log('Not a Wikipedia article page, skipping initialization');
+        // console.log('Not a relevant Wikipedia article page.');
         return;
     }
 
-    // Check if already processed
+    // Check if already processed to prevent multiple runs on the same page load/state
     if (document.documentElement.hasAttribute('data-age-processed')) {
-        console.log('Page already processed, skipping initialization');
+        // console.log('Page already processed.');
         return;
     }
 
-    console.log('Initializing Wikipedia Age Calculator...');
-    
-    // Create a new WeakSet instead of clearing (WeakSet has no clear method)
+    // Reset processed nodes for this run
     processedNodes = new WeakSet();
-    
-    // Wait a short moment to ensure the page is fully loaded
-    setTimeout(() => {
-        const birthYear = findBirthYear();
-        if (!birthYear) {
-            console.log('Could not find birth year, stopping');
-            return;
-        }
 
-        const deathYear = findDeathYear();
-        console.log('Processing ages with birth year:', birthYear, 'death year:', deathYear);
-        insertAges(birthYear, deathYear);
-        
-        // Set flag to prevent multiple processing
+    const birthYear = findBirthYear();
+    if (!birthYear) {
+        // console.log('Could not find birth year.');
+        // Mark as processed even if no birth year found, to avoid retrying constantly
         document.documentElement.setAttribute('data-age-processed', 'true');
-    }, 1500);
+        return;
+    }
+
+    const deathYear = findDeathYear();
+    // console.log('Processing ages with birth year:', birthYear, 'death year:', deathYear);
+    insertAges(birthYear, deathYear);
+
+    // Set flag to indicate processing is complete for this page view
+    document.documentElement.setAttribute('data-age-processed', 'true');
 }
 
-// Initialize when DOM is ready
+// Run the initialization logic
 if (document.readyState === 'loading') {
-    console.log('Document still loading, waiting for DOMContentLoaded');
+    // Loading hasn't finished yet
     document.addEventListener('DOMContentLoaded', initializeExtension);
 } else {
-    console.log('Document already loaded, running init immediately');
-    initializeExtension();
+    // `DOMContentLoaded` has already fired
+    // Defer slightly (250ms) to give rendering more time to settle
+    setTimeout(initializeExtension, 250);
 }
-
-// Fix the MutationObserver to be more selective about when to reinitialize
-const observer = new MutationObserver((mutations) => {
-    // Only reinitialize if the page hasn't been processed and is a Wikipedia article
-    if (isWikipediaArticle() && !document.documentElement.hasAttribute('data-age-processed')) {
-        initializeExtension();
-    }
-});
-
-// Start observing the document with the configured parameters
-observer.observe(document.body, { 
-    childList: true, 
-    subtree: true, 
-    characterData: false,
-    attributes: true,
-    attributeFilter: ['data-age-processed']
-}); 

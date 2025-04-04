@@ -3,7 +3,6 @@
   "name": "Wikipedia Age Calculator",
   "version": "1.0",
   "description": "Automatically calculates and displays ages next to years in Wikipedia articles",
-  "permissions": ["activeTab"],
   "host_permissions": ["*://*.wikipedia.org/*"],
   "content_scripts": [
     {
@@ -16,4 +15,4 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
-} 
+}
