@@ -1,11 +1,13 @@
 // Style for the age annotations
 const AGE_STYLE = {
-    color: '#666',
-    backgroundColor: '#f8f9fa',
-    padding: '2px 4px',
-    borderRadius: '3px',
-    fontSize: '0.9em',
-    marginLeft: '2px'
+    color: '#555', // Slightly darker grey for better contrast
+    // backgroundColor: '#f8f9fa', // Remove background
+    padding: '1px 3px', // Slightly reduce padding
+    borderRadius: '2px', // Slightly smaller radius
+    fontSize: '0.88em', // Slightly smaller font size
+    fontStyle: 'italic', // Add italics
+    marginLeft: '3px', // Slightly increase margin for separation
+    verticalAlign: 'baseline' // Ensure alignment with surrounding text
 };
 
 // Track processed nodes to prevent infinite loops
@@ -225,32 +227,13 @@ function insertAges(birthYear, deathYear) {
     });
 }
 
-// Function to check if we're on a relevant Wikipedia article page
-function isWikipediaArticle() {
-    if (!window.location.hostname.endsWith('wikipedia.org')) return false;
-    if (!window.location.pathname.startsWith('/wiki/')) return false;
-
-    const excludedPrefixes = ['Special:', 'File:', 'Template:', 'Category:', 'Wikipedia:', 'Portal:', 'Help:', 'Talk:'];
-    if (excludedPrefixes.some(prefix => window.location.pathname.includes('/wiki/' + prefix))) {
-        return false;
-    }
-    // Avoid main page
-    if (window.location.pathname === '/wiki/Main_Page') return false;
-
-    return true;
-}
-
 // Main function to initialize the extension logic
 function initializeExtension() {
-    if (!isWikipediaArticle()) {
-        // console.log('Not a relevant Wikipedia article page.');
-        return;
-    }
-
     // Check if already processed to prevent multiple runs on the same page load/state
+    // This is still useful in case the user clicks the button multiple times.
     if (document.documentElement.hasAttribute('data-age-processed')) {
-        // console.log('Page already processed.');
-        return;
+        console.log('Wikipedia Age Calculator: Page already processed.');
+        return; // Stop if already done
     }
 
     // Reset processed nodes for this run
@@ -258,26 +241,23 @@ function initializeExtension() {
 
     const birthYear = findBirthYear();
     if (!birthYear) {
-        // console.log('Could not find birth year.');
+        console.log('Wikipedia Age Calculator: Could not find birth year.');
         // Mark as processed even if no birth year found, to avoid retrying constantly
+        // if the button is clicked again.
         document.documentElement.setAttribute('data-age-processed', 'true');
         return;
     }
 
     const deathYear = findDeathYear();
-    // console.log('Processing ages with birth year:', birthYear, 'death year:', deathYear);
+    console.log('Wikipedia Age Calculator: Processing ages with birth year:', birthYear, 'death year:', deathYear);
     insertAges(birthYear, deathYear);
 
     // Set flag to indicate processing is complete for this page view
     document.documentElement.setAttribute('data-age-processed', 'true');
+    console.log('Wikipedia Age Calculator: Age processing complete.');
 }
 
-// Run the initialization logic
-if (document.readyState === 'loading') {
-    // Loading hasn't finished yet
-    document.addEventListener('DOMContentLoaded', initializeExtension);
-} else {
-    // `DOMContentLoaded` has already fired
-    // Defer slightly (250ms) to give rendering more time to settle
-    setTimeout(initializeExtension, 250);
-}
+// --- Execution ---
+// This script is now injected manually via the background script when the action icon is clicked.
+// We just need to call the main function.
+initializeExtension();
